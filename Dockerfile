@@ -11,4 +11,4 @@ RUN mkdir -p /app/data
 COPY --from=build /app/target/rks-collections-1.0.0.jar app.jar
 COPY --from=build /app/src/main/resources/products ./resources/products
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+CMD ["java", "-jar", "app.jar"]
