@@ -4,14 +4,11 @@ import com.rks.collections.model.Product;
 import com.rks.collections.service.AiAssistantService;
 import com.rks.collections.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URLConnection;
 import java.util.List;
@@ -38,24 +35,26 @@ public class ProductController {
             .orElse(ResponseEntity.notFound().build());
     }
 
-    /** Serve images & videos from classpath:products/{id}/{filename} */
+    /** Serve images/videos — reads from classpath inside JAR via InputStream */
     @GetMapping("/{id}/media/{filename}")
-    public ResponseEntity<Resource> getMedia(@PathVariable String id,
-                                              @PathVariable String filename) throws IOException {
-        ClassPathResource res = new ClassPathResource("products/" + id + "/" + filename);
-        if (!res.exists()) return ResponseEntity.notFound().build();
+    public ResponseEntity<byte[]> getMedia(@PathVariable String id,
+                                            @PathVariable String filename) throws IOException {
+        Resource resource = productService.getMediaResource(id, filename);
+        if (resource == null || !resource.exists()) {
+            return ResponseEntity.notFound().build();
+        }
 
-        File file = res.getFile();
         String mime = URLConnection.guessContentTypeFromName(filename);
         if (mime == null) mime = "application/octet-stream";
 
+        byte[] data = resource.getInputStream().readAllBytes();
+
         return ResponseEntity.ok()
             .contentType(MediaType.parseMediaType(mime))
-            .contentLength(file.length())
-            .body(new FileSystemResource(file));
+            .contentLength(data.length)
+            .body(data);
     }
 
-    /** AI-enhanced description for a product */
     @GetMapping("/{id}/ai-description")
     public ResponseEntity<?> getAiDescription(@PathVariable String id) {
         Optional<Product> p = productService.getById(id);
